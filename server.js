@@ -56,7 +56,7 @@ app.get('/api/companies', async (req, res) => {
 // Generate invoice
 app.post('/api/generate-invoice', async (req, res) => {
   try {
-    const { sheetName, companyKey } = req.body;
+    const { sheetName, companyKey, manualExpenses = [] } = req.body;
 
     if (!sheetName || !companyKey) {
       return res.status(400).json({
@@ -84,8 +84,14 @@ app.post('/api/generate-invoice', async (req, res) => {
       });
     }
 
-    // Calculate total amount
-    const totalAmount = lineItems.reduce((sum, item) => sum + item.amountToInvoice, 0);
+    // Calculate total amount from line items
+    const lineItemsTotal = lineItems.reduce((sum, item) => sum + item.amountToInvoice, 0);
+    
+    // Calculate total amount from manual expenses
+    const manualExpensesTotal = manualExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    
+    // Calculate grand total
+    const totalAmount = lineItemsTotal + manualExpensesTotal;
 
     // Extract month and year from sheet name
     const monthMatch = sheetName.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{4})$/);
@@ -115,6 +121,9 @@ app.post('/api/generate-invoice', async (req, res) => {
       month,
       year,
       lineItems,
+      manualExpenses,
+      lineItemsTotal,
+      manualExpensesTotal,
       totalAmount
     };
 

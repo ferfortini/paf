@@ -51,6 +51,9 @@ class PDFGenerator {
       month,
       year,
       lineItems,
+      manualExpenses = [],
+      lineItemsTotal,
+      manualExpensesTotal,
       totalAmount
     } = invoiceData;
 
@@ -242,7 +245,7 @@ class PDFGenerator {
         <table class="invoice-table">
           <thead>
             <tr>
-              <th>Consultant</th>
+              <th>Description</th>
               <th>Hours</th>
               <th>Rate</th>
               <th class="amount-column">Amount</th>
@@ -257,8 +260,33 @@ class PDFGenerator {
                 <td class="amount-column">$${item.amountToInvoice.toFixed(2)}</td>
               </tr>
             `).join('')}
+            ${manualExpenses.length > 0 ? `
+              <tr style="background-color: #f8f9fa;">
+                <td colspan="4" style="font-weight: bold; padding: 15px 12px; border-top: 2px solid #2c3e50;">
+                  Additional Expenses
+                </td>
+              </tr>
+              ${manualExpenses.map(expense => `
+                <tr>
+                  <td>${expense.description}</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td class="amount-column">$${expense.amount.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            ` : ''}
             <tr class="total-row">
-              <td colspan="3"><strong>Total</strong></td>
+              <td colspan="3"><strong>Subtotal (Services)</strong></td>
+              <td class="amount-column"><strong>$${lineItemsTotal.toFixed(2)}</strong></td>
+            </tr>
+            ${manualExpenses.length > 0 ? `
+              <tr class="total-row">
+                <td colspan="3"><strong>Subtotal (Expenses)</strong></td>
+                <td class="amount-column"><strong>$${manualExpensesTotal.toFixed(2)}</strong></td>
+              </tr>
+            ` : ''}
+            <tr class="total-row" style="background-color: #2c3e50; color: white;">
+              <td colspan="3"><strong>Total Amount</strong></td>
               <td class="amount-column"><strong>$${totalAmount.toFixed(2)}</strong></td>
             </tr>
           </tbody>

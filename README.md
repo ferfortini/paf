@@ -13,6 +13,8 @@ A comprehensive invoice generation system that fetches data from Google Sheets a
 - **Modern Web Interface**: Responsive design with preview functionality
 - **Real-time Data Fetching**: Pull fresh data from Google Sheets on demand
 - **Invoice Preview**: Preview invoice data before generation
+- **Manual Expense Entry**: Add custom expenses with descriptions and amounts
+- **Dynamic Totals**: Automatic calculation including manual expenses
 
 ## 🏢 Supported Companies
 
@@ -98,6 +100,16 @@ Company configurations are stored in `config/companies.js` and automatically sav
 
 Invoice numbers are automatically incremented and tracked per company. The system maintains the latest invoice number in the configuration file.
 
+### Manual Expenses
+
+The system supports adding manual expenses to invoices:
+
+- **Add Multiple Expenses**: Use the plus icon to add multiple expense entries
+- **Description & Amount**: Enter expense description and amount for each entry
+- **Automatic Calculation**: Manual expenses are automatically added to the total
+- **PDF Integration**: Expenses appear in the generated PDF with clear separation
+- **Skip Option**: Users can skip adding expenses if not needed
+
 ## 📁 Project Structure
 
 ```
@@ -134,6 +146,29 @@ npm test
 ```
 
 ## 📝 Version History
+
+### Version 1.0.4 - Manual Expenses Feature Added
+- **Date**: October 1, 2025
+- **Time**: 18:38 UTC
+- **Status**: ✅ Manual expenses feature implemented and tested
+- **Features**:
+  - Server running on port 3000
+  - All API endpoints responding correctly
+  - Google Sheets integration active
+  - Multi-company support operational
+  - Professional PDF generation ready with working logo
+  - Modern web interface accessible
+  - Automatic invoice numbering functional
+  - Invoice preview functionality working
+  - **NEW**: Manual expense entry with dynamic calculation
+- **New Functionality**:
+  - ✅ Added manual expense entry modal before invoice generation
+  - ✅ Users can add multiple expenses with descriptions and amounts
+  - ✅ Plus icon to add more expense entries
+  - ✅ Automatic total calculation including manual expenses
+  - ✅ Expenses appear in PDF with clear separation and subtotals
+  - ✅ Skip option for users who don't need to add expenses
+  - ✅ Tested successfully with sample expenses (163KB PDF generated)
 
 ### Version 1.0.3 - Logo Issue Fixed
 - **Date**: September 1, 2025

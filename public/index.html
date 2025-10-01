@@ -295,6 +295,45 @@
             text-align: right;
         }
 
+        .expense-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .expense-row input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .expense-row input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .expense-row .amount-input {
+            flex: 0 0 120px;
+        }
+
+        .expense-row .remove-btn {
+            flex: 0 0 40px;
+            padding: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .expense-row .remove-btn:hover {
+            background: #c0392b;
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -354,9 +393,49 @@
         </div>
     </div>
 
+    <!-- Manual Expenses Modal -->
+    <div id="expensesModal" class="preview-modal">
+        <div class="preview-content">
+            <div class="preview-header">
+                <h2>Add Manual Expenses</h2>
+                <button class="close-btn" onclick="closeExpensesModal()">&times;</button>
+            </div>
+            <div id="expensesContent">
+                <p style="margin-bottom: 20px; color: #7f8c8d;">
+                    Would you like to add any manual expenses to this invoice?
+                </p>
+                
+                <div id="expensesList">
+                    <!-- Expenses will be added here dynamically -->
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <button class="btn btn-primary" onclick="addExpenseRow()">
+                        <i class="fas fa-plus"></i> Add Expense
+                    </button>
+                </div>
+                
+                <div id="expensesTotal" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: right;">
+                    <strong>Total Manual Expenses: $<span id="totalExpensesAmount">0.00</span></strong>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn btn-secondary" onclick="skipExpenses()" style="margin-right: 10px;">
+                        <i class="fas fa-times"></i> Skip Expenses
+                    </button>
+                    <button class="btn btn-success" onclick="proceedWithExpenses()">
+                        <i class="fas fa-check"></i> Proceed with Expenses
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let sheets = [];
         let companies = {};
+        let manualExpenses = [];
+        let currentInvoiceData = null;
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
@@ -546,14 +625,145 @@
         // Generate invoice
         async function generateInvoice(sheetName, companyKey) {
             try {
+                // Store current invoice data
+                currentInvoiceData = { sheetName, companyKey };
+                
+                // Show expenses modal first
+                showExpensesModal();
+                
+            } catch (error) {
+                showMessage('Failed to prepare invoice generation: ' + error.message, 'error');
+            }
+        }
+
+        // Show expenses modal
+        function showExpensesModal() {
+            const modal = document.getElementById('expensesModal');
+            modal.style.display = 'block';
+            
+            // Reset expenses
+            manualExpenses = [];
+            updateExpensesList();
+            updateExpensesTotal();
+        }
+
+        // Close expenses modal
+        function closeExpensesModal() {
+            document.getElementById('expensesModal').style.display = 'none';
+            manualExpenses = [];
+        }
+
+        // Add expense row
+        function addExpenseRow() {
+            const expenseId = Date.now();
+            manualExpenses.push({
+                id: expenseId,
+                description: '',
+                amount: 0
+            });
+            updateExpensesList();
+        }
+
+        // Remove expense row
+        function removeExpenseRow(expenseId) {
+            manualExpenses = manualExpenses.filter(expense => expense.id !== expenseId);
+            updateExpensesList();
+            updateExpensesTotal();
+        }
+
+        // Update expense description
+        function updateExpenseDescription(expenseId, description) {
+            const expense = manualExpenses.find(e => e.id === expenseId);
+            if (expense) {
+                expense.description = description;
+            }
+        }
+
+        // Update expense amount
+        function updateExpenseAmount(expenseId, amount) {
+            const expense = manualExpenses.find(e => e.id === expenseId);
+            if (expense) {
+                expense.amount = parseFloat(amount) || 0;
+                updateExpensesTotal();
+            }
+        }
+
+        // Update expenses list display
+        function updateExpensesList() {
+            const container = document.getElementById('expensesList');
+            
+            if (manualExpenses.length === 0) {
+                container.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">No expenses added yet. Click "Add Expense" to add one.</p>';
+                return;
+            }
+
+            container.innerHTML = manualExpenses.map(expense => `
+                <div class="expense-row">
+                    <input type="text" 
+                           placeholder="Expense description" 
+                           value="${expense.description}"
+                           onchange="updateExpenseDescription(${expense.id}, this.value)">
+                    <input type="number" 
+                           class="amount-input"
+                           placeholder="0.00" 
+                           step="0.01"
+                           min="0"
+                           value="${expense.amount}"
+                           onchange="updateExpenseAmount(${expense.id}, this.value)">
+                    <button class="remove-btn" onclick="removeExpenseRow(${expense.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Update expenses total
+        function updateExpensesTotal() {
+            const total = manualExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+            document.getElementById('totalExpensesAmount').textContent = total.toFixed(2);
+        }
+
+        // Skip expenses and generate invoice
+        function skipExpenses() {
+            manualExpenses = [];
+            proceedWithInvoiceGeneration();
+        }
+
+        // Proceed with expenses and generate invoice
+        function proceedWithExpenses() {
+            // Validate expenses
+            const validExpenses = manualExpenses.filter(expense => 
+                expense.description.trim() && expense.amount > 0
+            );
+            
+            if (manualExpenses.length > 0 && validExpenses.length === 0) {
+                showMessage('Please add valid expense descriptions and amounts', 'error');
+                return;
+            }
+            
+            proceedWithInvoiceGeneration();
+        }
+
+        // Actually generate the invoice
+        async function proceedWithInvoiceGeneration() {
+            try {
+                closeExpensesModal();
                 showMessage('Generating invoice...', 'success');
+                
+                const requestData = {
+                    sheetName: currentInvoiceData.sheetName,
+                    companyKey: currentInvoiceData.companyKey,
+                    manualExpenses: manualExpenses.filter(expense => 
+                        expense.description.trim() && expense.amount > 0
+                    )
+                };
                 
                 const response = await fetch('/api/generate-invoice', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ sheetName, companyKey })
+                    body: JSON.stringify(requestData)
                 });
 
                 if (response.ok) {
@@ -562,7 +772,7 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Invoice_${companyKey}_${sheetName}.pdf`;
+                    a.download = `Invoice_${currentInvoiceData.companyKey}_${currentInvoiceData.sheetName}.pdf`;
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
@@ -591,9 +801,14 @@
 
         // Close modal when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('previewModal');
-            if (event.target === modal) {
+            const previewModal = document.getElementById('previewModal');
+            const expensesModal = document.getElementById('expensesModal');
+            
+            if (event.target === previewModal) {
                 closePreview();
+            }
+            if (event.target === expensesModal) {
+                closeExpensesModal();
             }
         }
     </script>
