@@ -275,17 +275,7 @@ class PDFGenerator {
                 </tr>
               `).join('')}
             ` : ''}
-            <tr class="total-row">
-              <td colspan="3"><strong>Subtotal (Services)</strong></td>
-              <td class="amount-column"><strong>$${lineItemsTotal.toFixed(2)}</strong></td>
-            </tr>
-            ${manualExpenses.length > 0 ? `
-              <tr class="total-row">
-                <td colspan="3"><strong>Subtotal (Expenses)</strong></td>
-                <td class="amount-column"><strong>$${manualExpensesTotal.toFixed(2)}</strong></td>
-              </tr>
-            ` : ''}
-            <tr class="total-row" style="background-color: #2c3e50; color: white;">
+            <tr class="total-row" style="background-color: #2c3e50; color: black; font-weight: bold;">
               <td colspan="3"><strong>Total Amount</strong></td>
               <td class="amount-column"><strong>$${totalAmount.toFixed(2)}</strong></td>
             </tr>

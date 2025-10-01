@@ -413,6 +413,9 @@
                     <button class="btn btn-primary" onclick="addExpenseRow()">
                         <i class="fas fa-plus"></i> Add Expense
                     </button>
+                    <button class="btn btn-secondary" onclick="debugStorage()" style="margin-left: 10px;">
+                        <i class="fas fa-bug"></i> Debug Storage
+                    </button>
                 </div>
                 
                 <div id="expensesTotal" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: right;">
@@ -641,16 +644,18 @@
             const modal = document.getElementById('expensesModal');
             modal.style.display = 'block';
             
-            // Reset expenses
-            manualExpenses = [];
+            // Load expenses from session storage
+            loadExpensesFromStorage();
             updateExpensesList();
             updateExpensesTotal();
         }
 
         // Close expenses modal
         function closeExpensesModal() {
+            console.log('closeExpensesModal called, manualExpenses before clearing:', manualExpenses);
             document.getElementById('expensesModal').style.display = 'none';
-            manualExpenses = [];
+            // Don't clear expenses here - they should persist until invoice generation
+            // manualExpenses = [];
         }
 
         // Add expense row
@@ -662,6 +667,7 @@
                 amount: 0
             });
             updateExpensesList();
+            saveExpensesToStorage();
         }
 
         // Remove expense row
@@ -669,6 +675,7 @@
             manualExpenses = manualExpenses.filter(expense => expense.id !== expenseId);
             updateExpensesList();
             updateExpensesTotal();
+            saveExpensesToStorage();
         }
 
         // Update expense description
@@ -676,6 +683,7 @@
             const expense = manualExpenses.find(e => e.id === expenseId);
             if (expense) {
                 expense.description = description;
+                saveExpensesToStorage();
             }
         }
 
@@ -685,7 +693,40 @@
             if (expense) {
                 expense.amount = parseFloat(amount) || 0;
                 updateExpensesTotal();
+                saveExpensesToStorage();
             }
+        }
+
+        // Save expenses to session storage
+        function saveExpensesToStorage() {
+            try {
+                sessionStorage.setItem('manualExpenses', JSON.stringify(manualExpenses));
+            } catch (error) {
+                console.error('Error saving expenses to storage:', error);
+            }
+        }
+
+        // Load expenses from session storage
+        function loadExpensesFromStorage() {
+            try {
+                const saved = sessionStorage.getItem('manualExpenses');
+                if (saved) {
+                    manualExpenses = JSON.parse(saved);
+                } else {
+                    manualExpenses = [];
+                }
+            } catch (error) {
+                console.error('Error loading expenses from storage:', error);
+                manualExpenses = [];
+            }
+        }
+
+        // Debug storage function
+        function debugStorage() {
+            const saved = sessionStorage.getItem('manualExpenses');
+            console.log('Session storage contents:', saved);
+            console.log('Current manualExpenses array:', manualExpenses);
+            alert(`Storage: ${saved}\nCurrent: ${JSON.stringify(manualExpenses)}`);
         }
 
         // Update expenses list display
@@ -702,14 +743,14 @@
                     <input type="text" 
                            placeholder="Expense description" 
                            value="${expense.description}"
-                           onchange="updateExpenseDescription(${expense.id}, this.value)">
+                           oninput="updateExpenseDescription(${expense.id}, this.value)">
                     <input type="number" 
                            class="amount-input"
                            placeholder="0.00" 
                            step="0.01"
                            min="0"
                            value="${expense.amount}"
-                           onchange="updateExpenseAmount(${expense.id}, this.value)">
+                           oninput="updateExpenseAmount(${expense.id}, this.value)">
                     <button class="remove-btn" onclick="removeExpenseRow(${expense.id})">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -726,20 +767,30 @@
         // Skip expenses and generate invoice
         function skipExpenses() {
             manualExpenses = [];
+            sessionStorage.removeItem('manualExpenses');
             proceedWithInvoiceGeneration();
         }
 
         // Proceed with expenses and generate invoice
         function proceedWithExpenses() {
+            console.log('proceedWithExpenses called');
+            console.log('Current manualExpenses before filtering:', manualExpenses);
+            
             // Validate expenses
             const validExpenses = manualExpenses.filter(expense => 
                 expense.description.trim() && expense.amount > 0
             );
             
+            console.log('Valid expenses after filtering:', validExpenses);
+            
             if (manualExpenses.length > 0 && validExpenses.length === 0) {
                 showMessage('Please add valid expense descriptions and amounts', 'error');
                 return;
             }
+            
+            // Update the global array with valid expenses before proceeding
+            manualExpenses = validExpenses;
+            console.log('Updated manualExpenses before generation:', manualExpenses);
             
             proceedWithInvoiceGeneration();
         }
@@ -747,16 +798,27 @@
         // Actually generate the invoice
         async function proceedWithInvoiceGeneration() {
             try {
+                console.log('proceedWithInvoiceGeneration called');
+                console.log('manualExpenses at start of generation:', manualExpenses);
+                
                 closeExpensesModal();
                 showMessage('Generating invoice...', 'success');
+                
+                const filteredExpenses = manualExpenses.filter(expense => 
+                    expense.description.trim() && expense.amount > 0
+                );
+                
+                console.log('filteredExpenses:', filteredExpenses);
                 
                 const requestData = {
                     sheetName: currentInvoiceData.sheetName,
                     companyKey: currentInvoiceData.companyKey,
-                    manualExpenses: manualExpenses.filter(expense => 
-                        expense.description.trim() && expense.amount > 0
-                    )
+                    manualExpenses: filteredExpenses
                 };
+                
+                console.log('Manual expenses being sent:', filteredExpenses);
+                console.log('All manual expenses:', manualExpenses);
+                console.log('Request data being sent:', requestData);
                 
                 const response = await fetch('/api/generate-invoice', {
                     method: 'POST',
@@ -780,6 +842,8 @@
                     
                     showMessage('Invoice generated successfully!', 'success');
                     closePreview();
+                    // Clear expenses from storage after successful generation
+                    sessionStorage.removeItem('manualExpenses');
                 } else {
                     const errorData = await response.json();
                     showMessage('Error generating invoice: ' + errorData.error, 'error');

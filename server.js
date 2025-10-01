@@ -90,6 +90,11 @@ app.post('/api/generate-invoice', async (req, res) => {
     // Calculate total amount from manual expenses
     const manualExpensesTotal = manualExpenses.reduce((sum, expense) => sum + expense.amount, 0);
     
+    // Debug logging
+    console.log('Manual expenses received:', manualExpenses);
+    console.log('Manual expenses total:', manualExpensesTotal);
+    console.log('Line items total:', lineItemsTotal);
+    
     // Calculate grand total
     const totalAmount = lineItemsTotal + manualExpensesTotal;
 
