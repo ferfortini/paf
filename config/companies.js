@@ -47,6 +47,12 @@ class CompanyManager {
 
   async loadCompanies() {
     try {
+      // Skip file operations in Vercel serverless environment
+      if (process.env.VERCEL) {
+        this.companies = DEFAULT_COMPANIES;
+        return;
+      }
+      
       await fs.ensureDir(path.dirname(COMPANIES_CONFIG_FILE));
       const exists = await fs.pathExists(COMPANIES_CONFIG_FILE);
       
@@ -65,6 +71,11 @@ class CompanyManager {
 
   async saveCompanies() {
     try {
+      // Skip file operations in Vercel serverless environment
+      if (process.env.VERCEL) {
+        return;
+      }
+      
       await fs.writeJson(COMPANIES_CONFIG_FILE, this.companies, { spaces: 2 });
     } catch (error) {
       console.error('Error saving companies:', error);

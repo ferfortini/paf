@@ -8,6 +8,16 @@ const pdfGenerator = require('../services/pdfGenerator');
 jest.mock('../services/googleSheetsService');
 jest.mock('../services/pdfGenerator');
 
+// Helper function to create authenticated session
+const createAuthenticatedSession = async () => {
+  const agent = request.agent(app);
+  await agent.post('/api/login').send({
+    username: 'admin',
+    password: 'password'
+  });
+  return agent;
+};
+
 describe('Invoice Generation System', () => {
   beforeEach(() => {
     // Clear all mocks before each test
@@ -16,7 +26,8 @@ describe('Invoice Generation System', () => {
 
   describe('API Endpoints', () => {
     test('GET /api/health should return health status', async () => {
-      const response = await request(app).get('/api/health');
+      const agent = await createAuthenticatedSession();
+      const response = await agent.get('/api/health');
       
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -25,7 +36,8 @@ describe('Invoice Generation System', () => {
     });
 
     test('GET /api/companies should return company configurations', async () => {
-      const response = await request(app).get('/api/companies');
+      const agent = await createAuthenticatedSession();
+      const response = await agent.get('/api/companies');
       
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -43,7 +55,8 @@ describe('Invoice Generation System', () => {
       const mockSheets = ['January2024', 'February2024', 'March2024'];
       googleSheetsService.getAvailableSheets.mockResolvedValue(mockSheets);
 
-      const response = await request(app).get('/api/sheets');
+      const agent = await createAuthenticatedSession();
+      const response = await agent.get('/api/sheets');
       
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -53,7 +66,8 @@ describe('Invoice Generation System', () => {
     test('GET /api/sheets should handle errors', async () => {
       googleSheetsService.getAvailableSheets.mockRejectedValue(new Error('API Error'));
 
-      const response = await request(app).get('/api/sheets');
+      const agent = await createAuthenticatedSession();
+      const response = await agent.get('/api/sheets');
       
       expect(response.status).toBe(500);
       expect(response.body.success).toBe(false);
