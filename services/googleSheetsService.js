@@ -14,6 +14,13 @@ class GoogleSheetsService {
       // First try to use API key if available
       const apiKey = process.env.GOOGLE_API_KEY;
       
+      console.log('Google Sheets authentication debug:');
+      console.log('API Key present:', !!apiKey);
+      console.log('API Key length:', apiKey ? apiKey.length : 0);
+      console.log('API Key starts with:', apiKey ? apiKey.substring(0, 10) + '...' : 'N/A');
+      console.log('Environment:', process.env.NODE_ENV);
+      console.log('Vercel environment:', !!process.env.VERCEL);
+      
       if (apiKey) {
         console.log('Using Google API key for authentication');
         this.sheets = google.sheets({ 

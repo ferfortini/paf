@@ -180,10 +180,21 @@ app.get('/', (req, res) => {
 // Get available sheets
 app.get('/api/sheets', requireAuth, async (req, res) => {
   try {
+    console.log('Fetching sheets - Environment variables:');
+    console.log('GOOGLE_API_KEY present:', !!process.env.GOOGLE_API_KEY);
+    console.log('GOOGLE_SPREADSHEET_ID present:', !!process.env.GOOGLE_SPREADSHEET_ID);
+    console.log('GOOGLE_SPREADSHEET_ID value:', process.env.GOOGLE_SPREADSHEET_ID);
+    
     const sheets = await googleSheetsService.getAvailableSheets();
     res.json({ success: true, sheets });
   } catch (error) {
     console.error('Error fetching sheets:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      response: error.response?.data
+    });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to fetch sheets' 
