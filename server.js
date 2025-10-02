@@ -309,15 +309,17 @@ app.use((req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Invoice System server running on port ${PORT}`);
-  console.log(`📊 Available at: http://localhost:${PORT}`);
-  console.log(`📋 API endpoints:`);
-  console.log(`   GET  /api/sheets - Get available sheets`);
-  console.log(`   GET  /api/companies - Get company configurations`);
-  console.log(`   POST /api/generate-invoice - Generate PDF invoice`);
-  console.log(`   GET  /api/sheet-data/:sheet/:company - Preview sheet data`);
-});
+// Start server (only for local development)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Invoice System server running on port ${PORT}`);
+    console.log(`📊 Available at: http://localhost:${PORT}`);
+    console.log(`📋 API endpoints:`);
+    console.log(`   GET  /api/sheets - Get available sheets`);
+    console.log(`   GET  /api/companies - Get company configurations`);
+    console.log(`   POST /api/generate-invoice - Generate PDF invoice`);
+    console.log(`   GET  /api/sheet-data/:sheet/:company - Preview sheet data`);
+  });
+}
 
 module.exports = app; 
