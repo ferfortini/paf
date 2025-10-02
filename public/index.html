@@ -449,6 +449,24 @@
         let manualExpenses = [];
         let currentInvoiceData = null;
 
+        // Helper function for authenticated API requests
+        async function authenticatedFetch(url, options = {}) {
+            const token = localStorage.getItem('authToken');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            return fetch(url, {
+                ...options,
+                headers
+            });
+        }
+
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             // Check authentication first
@@ -460,7 +478,7 @@
         // Check authentication status
         async function checkAuth() {
             try {
-                const response = await fetch('/api/check-auth');
+                const response = await authenticatedFetch('/api/check-auth');
                 const data = await response.json();
                 
                 if (!data.authenticated) {
@@ -475,16 +493,14 @@
         // Logout function
         async function logout() {
             try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                const response = await authenticatedFetch('/api/logout', {
+                    method: 'POST'
                 });
 
                 const data = await response.json();
                 
                 if (data.success) {
+                    localStorage.removeItem('authToken');
                     showMessage('Logged out successfully', 'success');
                     setTimeout(() => {
                         window.location.href = '/login';
@@ -493,6 +509,7 @@
                     showMessage('Logout failed: ' + data.error, 'error');
                 }
             } catch (error) {
+                localStorage.removeItem('authToken');
                 showMessage('Logout failed: ' + error.message, 'error');
             }
         }
@@ -500,7 +517,7 @@
         // Load companies
         async function loadCompanies() {
             try {
-                const response = await fetch('/api/companies');
+                const response = await authenticatedFetch('/api/companies');
                 const data = await response.json();
                 
                 if (data.success) {
@@ -530,7 +547,7 @@
         // Load available sheets
         async function loadSheets() {
             try {
-                const response = await fetch('/api/sheets');
+                const response = await authenticatedFetch('/api/sheets');
                 const data = await response.json();
                 
                 if (data.success) {
@@ -606,7 +623,7 @@
         // Preview data
         async function previewData(sheetName, companyKey) {
             try {
-                const response = await fetch(`/api/sheet-data/${encodeURIComponent(sheetName)}/${encodeURIComponent(companyKey)}`);
+                const response = await authenticatedFetch(`/api/sheet-data/${encodeURIComponent(sheetName)}/${encodeURIComponent(companyKey)}`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -871,11 +888,8 @@
                 console.log('All manual expenses:', manualExpenses);
                 console.log('Request data being sent:', requestData);
                 
-                const response = await fetch('/api/generate-invoice', {
+                const response = await authenticatedFetch('/api/generate-invoice', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
                     body: JSON.stringify(requestData)
                 });
 

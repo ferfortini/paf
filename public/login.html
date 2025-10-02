@@ -207,6 +207,10 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // Store JWT token for Vercel serverless
+                    if (data.token) {
+                        localStorage.setItem('authToken', data.token);
+                    }
                     showMessage('Login successful! Redirecting...', 'success');
                     setTimeout(() => {
                         window.location.href = '/';

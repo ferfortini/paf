@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs-extra');
 const session = require('express-session');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const googleSheetsService = require('./services/googleSheetsService');
@@ -24,14 +25,33 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true, // Prevent XSS attacks
+    sameSite: 'lax' // CSRF protection
   },
-  // Use memory store for Vercel compatibility
-  store: undefined // Default memory store
+  // Use cookie-based sessions for Vercel serverless compatibility
+  // No store = cookie-based sessions (persistent across function invocations)
 }));
 
 // Authentication middleware
 function requireAuth(req, res, next) {
+  // Check JWT token first (for Vercel serverless)
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.SESSION_SECRET || 'your-secret-key-change-this');
+      req.user = decoded;
+      return next();
+    } catch (error) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid token' 
+      });
+    }
+  }
+  
+  // Fallback to session-based auth (for local development)
   if (req.session && req.session.authenticated) {
     return next();
   } else {
@@ -71,11 +91,21 @@ app.post('/api/login', (req, res) => {
   });
   
   if (username === validUsername && password === validPassword) {
+    // Create session for local development
     req.session.authenticated = true;
     req.session.username = username;
+    
+    // Create JWT token for Vercel serverless
+    const token = jwt.sign(
+      { username, authenticated: true }, 
+      process.env.SESSION_SECRET || 'your-secret-key-change-this',
+      { expiresIn: '24h' }
+    );
+    
     res.json({ 
       success: true, 
-      message: 'Login successful' 
+      message: 'Login successful',
+      token: token // Include JWT token for Vercel
     });
   } else {
     res.status(401).json({ 
