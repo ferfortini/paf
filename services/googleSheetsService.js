@@ -58,6 +58,9 @@ class GoogleSheetsService {
         await this.authenticate();
       }
 
+      console.log('Attempting to fetch spreadsheet:', this.spreadsheetId);
+      console.log('Sheets service initialized:', !!this.sheets);
+      
       const response = await this.sheets.spreadsheets.get({
         spreadsheetId: this.spreadsheetId
       });

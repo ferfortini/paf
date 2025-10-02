@@ -177,6 +177,39 @@ app.get('/', (req, res) => {
   }
 });
 
+// Test Google API connection
+app.get('/api/test-google-api', requireAuth, async (req, res) => {
+  try {
+    console.log('Testing Google API connection...');
+    console.log('GOOGLE_API_KEY present:', !!process.env.GOOGLE_API_KEY);
+    console.log('GOOGLE_SPREADSHEET_ID present:', !!process.env.GOOGLE_SPREADSHEET_ID);
+    
+    // Test with a simple API call
+    const { google } = require('googleapis');
+    const sheets = google.sheets({ 
+      version: 'v4', 
+      key: process.env.GOOGLE_API_KEY
+    });
+    
+    const response = await sheets.spreadsheets.get({
+      spreadsheetId: process.env.GOOGLE_SPREADSHEET_ID
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Google API connection successful',
+      spreadsheetTitle: response.data.properties?.title || 'Unknown'
+    });
+  } catch (error) {
+    console.error('Google API test failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: error.response?.data || 'No additional details'
+    });
+  }
+});
+
 // Get available sheets
 app.get('/api/sheets', requireAuth, async (req, res) => {
   try {
