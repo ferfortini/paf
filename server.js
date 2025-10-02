@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs-extra');
+const session = require('express-session');
 require('dotenv').config();
 
 const googleSheetsService = require('./services/googleSheetsService');
@@ -16,17 +17,109 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Ensure data directory exists
-const dataDir = path.join(__dirname, 'data');
-fs.ensureDirSync(dataDir);
+// Session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  },
+  // Use memory store for Vercel compatibility
+  store: undefined // Default memory store
+}));
+
+// Authentication middleware
+function requireAuth(req, res, next) {
+  if (req.session && req.session.authenticated) {
+    return next();
+  } else {
+    return res.status(401).json({ 
+      success: false, 
+      error: 'Authentication required' 
+    });
+  }
+}
+
+// Ensure data directory exists (skip in Vercel serverless environment)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  const dataDir = path.join(__dirname, 'data');
+  fs.ensureDirSync(dataDir);
+}
 
 // Routes
+
+// Login route
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Login API
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  
+  const validUsername = process.env.LOGIN_USERNAME || 'admin';
+  const validPassword = process.env.LOGIN_PASSWORD || 'password';
+  
+  // Debug logging
+  console.log('Login attempt:', { username, password });
+  console.log('Expected credentials:', { validUsername, validPassword });
+  console.log('Environment variables:', { 
+    LOGIN_USERNAME: process.env.LOGIN_USERNAME, 
+    LOGIN_PASSWORD: process.env.LOGIN_PASSWORD 
+  });
+  
+  if (username === validUsername && password === validPassword) {
+    req.session.authenticated = true;
+    req.session.username = username;
+    res.json({ 
+      success: true, 
+      message: 'Login successful' 
+    });
+  } else {
+    res.status(401).json({ 
+      success: false, 
+      error: 'Invalid username or password' 
+    });
+  }
+});
+
+// Logout API
+app.post('/api/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Could not log out' 
+      });
+    }
+    res.json({ 
+      success: true, 
+      message: 'Logged out successfully' 
+    });
+  });
+});
+
+// Check authentication status
+app.get('/api/check-auth', (req, res) => {
+  res.json({ 
+    authenticated: !!(req.session && req.session.authenticated),
+    username: req.session ? req.session.username : null
+  });
+});
+
+// Main route - redirect to login if not authenticated
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  if (req.session && req.session.authenticated) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    res.redirect('/login');
+  }
 });
 
 // Get available sheets
-app.get('/api/sheets', async (req, res) => {
+app.get('/api/sheets', requireAuth, async (req, res) => {
   try {
     const sheets = await googleSheetsService.getAvailableSheets();
     res.json({ success: true, sheets });
@@ -40,7 +133,7 @@ app.get('/api/sheets', async (req, res) => {
 });
 
 // Get companies
-app.get('/api/companies', async (req, res) => {
+app.get('/api/companies', requireAuth, async (req, res) => {
   try {
     const companies = companyManager.getAllCompanies();
     res.json({ success: true, companies });
@@ -54,7 +147,7 @@ app.get('/api/companies', async (req, res) => {
 });
 
 // Generate invoice
-app.post('/api/generate-invoice', async (req, res) => {
+app.post('/api/generate-invoice', requireAuth, async (req, res) => {
   try {
     const { sheetName, companyKey, manualExpenses = [] } = req.body;
 
@@ -159,7 +252,7 @@ app.post('/api/generate-invoice', async (req, res) => {
 });
 
 // Get sheet data for preview
-app.get('/api/sheet-data/:sheetName/:companyKey', async (req, res) => {
+app.get('/api/sheet-data/:sheetName/:companyKey', requireAuth, async (req, res) => {
   try {
     const { sheetName, companyKey } = req.params;
 
@@ -191,7 +284,7 @@ app.get('/api/sheet-data/:sheetName/:companyKey', async (req, res) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', requireAuth, (req, res) => {
   res.json({ 
     success: true, 
     message: 'Invoice System is running',
