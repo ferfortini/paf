@@ -133,6 +133,22 @@ app.post('/api/logout', (req, res) => {
 
 // Check authentication status
 app.get('/api/check-auth', (req, res) => {
+  // Check JWT token first (for Vercel serverless)
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.SESSION_SECRET || 'your-secret-key-change-this');
+      return res.json({ 
+        authenticated: true,
+        username: decoded.username
+      });
+    } catch (error) {
+      // Token invalid, fall through to session check
+    }
+  }
+  
+  // Fallback to session-based auth (for local development)
   res.json({ 
     authenticated: !!(req.session && req.session.authenticated),
     username: req.session ? req.session.username : null
@@ -141,6 +157,19 @@ app.get('/api/check-auth', (req, res) => {
 
 // Main route - redirect to login if not authenticated
 app.get('/', (req, res) => {
+  // Check JWT token first (for Vercel serverless)
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (token) {
+    try {
+      jwt.verify(token, process.env.SESSION_SECRET || 'your-secret-key-change-this');
+      return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } catch (error) {
+      // Token invalid, fall through to session check
+    }
+  }
+  
+  // Fallback to session-based auth (for local development)
   if (req.session && req.session.authenticated) {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   } else {
